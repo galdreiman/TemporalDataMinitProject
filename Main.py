@@ -4,6 +4,7 @@ from descritization.SAX import SAX
 from seq_minig.Bibe import Bibe
 from classification.SVMClassifier import SVMClassifier
 
+
 class TDM(object):
 
     def __init__(self):
