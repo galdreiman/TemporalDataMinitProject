@@ -1,6 +1,6 @@
 
 from preprocess.DataPreperation import DataPreperation
-from descritization.SAX import SAX
+from descritization.mySAX import mySAX
 from seq_minig.Bibe import Bibe
 from classification.SVMClassifier import SVMClassifier
 
@@ -14,12 +14,13 @@ class TDM(object):
     def preprocess_input(self, filename):
         print ('------------ preprocess_input file: ' + filename + ' ------------ ')
         data_preparer = DataPreperation(filename)
-        data_preparer.prepare_data()
+        self.input_train_data = data_preparer.prepare_data()
+
 
     def discrit_data(self):
         print('------------  discritization ------------ ')
-        desc = SAX()
-        desc.perporm_discritization()
+        desc = mySAX()
+        desc.perporm_discritization(self.input_train_data)
 
     def sequence_mining(self):
         print ('------------  sequence minig ------------ ')
@@ -45,8 +46,8 @@ class TDM(object):
         print('running sequence')
 
         # preprocess
-        filename = 'path'
-        self.preprocess_input(filename)
+        input_filename = 'Data/buys_small.dat'
+        self.preprocess_input(input_filename)
 
         #discritization
         self.discrit_data()
