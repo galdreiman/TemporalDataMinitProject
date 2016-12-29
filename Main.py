@@ -20,7 +20,7 @@ class TDM(object):
     def discrit_data(self):
         print('------------  discritization ------------ ')
         desc = mySAX()
-        desc.perporm_discritization(self.input_train_data)
+        desc.perform_discritization(self.input_train_data)
 
     def sequence_mining(self):
         print ('------------  sequence minig ------------ ')
