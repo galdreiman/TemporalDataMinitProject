@@ -7,3 +7,6 @@ class BaseDiscritization(object):
 
     def perform_discritization(self, input_data):
         raise NotImplementedError
+
+    def discretize(self, value):
+        raise NotImplementedError

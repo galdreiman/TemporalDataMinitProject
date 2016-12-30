@@ -1,11 +1,11 @@
 from seq_minig.BaseMiner import BaseMiner
 
 
-class Bibe(BaseMiner):
+class Bide(BaseMiner):
 
     def __init__(self):
         BaseMiner.__init__(self)
-        print ('init BIBE')
+        print ('init BIDE')
 
     def mine_sequence(self):
-        print('Bibe: nime_sequence')
+        print('Bide: nime_sequence')
