@@ -53,8 +53,21 @@ class SAX(object):
         Function takes a series of data, x, and transforms it to a string representation
         """
         (paaX, indices) = self.to_PAA(self.normalize(x))
+
         self.scalingFactor = np.sqrt((len(x) * 1.0) / (self.wordSize * 1.0))
-        return (self.alphabetize(paaX), indices)
+        alphbet_tmp = self.alphabetize(paaX)
+        print('*****************************')
+        print (alphbet_tmp)
+        print('*****************************')
+        return (alphbet_tmp, indices)
+
+    def to_letter_strings(self, x):
+        (paaX, indices) = self.to_PAA(self.normalize(x))
+
+        self.scalingFactor = np.sqrt((len(x) * 1.0) / (self.wordSize * 1.0))
+        alphbet_tmp = self.alphabetize(paaX)
+
+        return alphbet_tmp
 
     def normalize(self, x):
         """

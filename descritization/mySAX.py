@@ -8,17 +8,15 @@ class mySAX(BaseDiscritization):
         BaseDiscritization.__init__(self)
         print('initializing SAX')
 
-    def perform_discritization(self, input_data):
-        print('perporm_discritization...')
+    def perform_discritization(self, prices):
+        s = SAX(4, 3, 1e-6)
+        # print ('------------------')
+        # print(prices)
 
-        s = SAX(1, 3, 1e-6)
-        print(input_data[0])
-        price_index = 3
-        prices = [int(line[price_index]) for line in input_data if line[price_index].isdigit()]
-        print(len(prices))
+        if len(prices) <2:
+            return
 
-        print(prices)
+        x1String = s.to_letter_strings(prices)
+        # for s,i in ret: print('%s||%s' %(s,i))
 
-        (x1String, x1Indices) = s.to_letter_rep(prices)
-
-        for s,i in zip(x1String,x1Indices): print('%s||%s' %(s,i))
+        return x1String
