@@ -23,6 +23,8 @@ class DataPreperation(object):
         for row in csv_data:
             session_id = row[0]
             price = row[PRICE_INDEX]
+            if session_id == 'Session ID':
+                continue
 
             if session_id in user_to_csv_map:
                 user_to_csv_map[session_id].append(price)

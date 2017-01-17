@@ -1,3 +1,5 @@
+from descritization.csvEFD import csvEFD
+from descritization.csvEWD import csvEWD
 from preprocess.DataPreperation import DataPreperation
 from descritization.mySAX import mySAX
 from descritization.myEFD import myEFD
@@ -23,11 +25,16 @@ class TDM(object):
 
         self.user_to_prices_map = data_preparer.read_user_to_purchases_data()
 
-    def print_preprocess_input(self):
+    def store_prices_as_csv(self):
         with open(self.input_filename.replace('.dat', '_prices.txt'), 'w') as f:
             for user, prices in self.user_to_prices_map.items():
                 if(len(prices) > 1):
                     f.write(','.join(prices) + '\n')
+
+    def discrit_data_ewd(self):
+        csvEFD(self.user_to_prices_map, 5, 10, self.input_filename.replace('.dat', '_EFD.txt'))
+        csvEWD(self.user_to_prices_map, 5, 10, self.input_filename.replace('.dat', '_EWD.txt'))
+
 
 
 
@@ -123,13 +130,15 @@ class TDM(object):
         print('running sequence')
 
         # preprocess
-        #self.preprocess_input()
+        self.preprocess_input()
 
         #print pricess data
-        #self.print_preprocess_input()
+        self.store_prices_as_csv()
+
+        self.discrit_data_ewd()
 
         #convert SPADE's output to table for classifier
-        self.convert_spade_output_to_table()
+        # self.convert_spade_output_to_table()
 
         # discritization
         #label_sequences = self.discrit_data()
@@ -138,7 +147,7 @@ class TDM(object):
         #self.sequence_mining(label_sequences)
 
         # classify
-        self.classify_data()
+        # self.classify_data()
 
 
 if __name__ == "__main__":
