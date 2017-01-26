@@ -4,6 +4,7 @@ from preprocess.DataPreperation import DataPreperation
 from descritization.mySAX import mySAX
 from descritization.myEFD import myEFD
 from descritization.myEWD import myEWD
+import re
 from seq_minig.Bibe import Bide
 from classification.SVMClassifier import SVMClassifier
 import csv
@@ -24,6 +25,11 @@ class TDM(object):
         self.prices = [int(line[PRICE_INDEX]) for line in self.input_train_data if line[PRICE_INDEX].isdigit()]
 
         self.user_to_prices_map = data_preparer.read_user_to_purchases_data()
+        self.target_price_for_user = dict()
+        for user,prices in self.user_to_prices_map.items():
+            self.target_price_for_user[user] = prices[-1]
+            print('user: %s, prices: %s'% ( user, prices))
+
 
     def store_prices_as_csv(self):
         with open(self.input_filename.replace('.dat', '_prices.txt'), 'w') as f:
@@ -45,6 +51,7 @@ class TDM(object):
         self.sax_desc = mySAX()
         self.sax_user_to_labels_map = dict()
 
+        self.user_to_label_sequence_map = dict()
         label_sequences = []
 
         for session_id, user_prices in self.user_to_prices_map.items():
@@ -55,6 +62,11 @@ class TDM(object):
             label_seq = self.sax_desc.perform_discritization(int_user_prices)
             if(label_seq is not None):
                 label_sequences.append(label_seq)
+
+                if(session_id in self.user_to_label_sequence_map.keys()):
+                    self.user_to_label_sequence_map[session_id].append(label_seq)
+                else:
+                    self.user_to_label_sequence_map[session_id] = [label_seq]
 
         print(label_sequences)
         return label_sequences
@@ -69,7 +81,8 @@ class TDM(object):
     def sequence_mining(self,label_sequences):
         print('------------  sequence mining ------------ ')
         miner = Bide()
-        miner.mine_sequence(label_sequences)
+        sorted_freq_seqs = miner.mine_sequence(label_sequences)
+        return sorted_freq_seqs
 
     def classify_data(self):
         print('------------  classifying ------------')
@@ -106,11 +119,18 @@ class TDM(object):
 
         for sid in SID_to_labels_map.keys():
             row = []
+
             for label in all_labels:
                 if label in SID_to_labels_map[sid]:
                     row.append(1)
                 else:
                     row.append(0)
+            # appending target value: the last price in the purchase sequence:
+            print (sid)
+            keys = [x for x in self.target_price_for_user.keys()]
+            if(int(sid) in keys):
+                print("sid [%d]   price [%s]" %(sid, self.target_price_for_user[str(sid)]))
+                row.append(self.target_price_for_user[sid])
             all_SIDs_lables.append(row)
 
         for row in all_SIDs_lables: print (row)
@@ -122,6 +142,16 @@ class TDM(object):
                 print(row)
                 writer.writerow(row)
 
+    def build_freq_table_for_users(self, sorted_freq_seqs):
+        print('build_freq_table_for_users')
+        print(sorted_freq_seqs)
+        for session_id, user_seq in self.user_to_label_sequence_map.items():
+            # print('user: %s  sequence: %s' % (session_id,user_seq))
+            for tpl in sorted_freq_seqs:
+                seq = '.*'.join(tpl[0])
+                print (seq)
+                # check using regex if seq matches the user_sequence:
+
 
 
 
@@ -129,25 +159,26 @@ class TDM(object):
     def run_sequence(self):
         print('running sequence')
 
-        # preprocess
+        # --------- preprocess -----------
         self.preprocess_input()
 
+        # --------- discritization -----------
         #print pricess data
-        self.store_prices_as_csv()
-
-        self.discrit_data_ewd()
+        # self.store_prices_as_csv()
+        label_sequences = self.discrit_data()
+        # self.discrit_data_ewd()
 
         #convert SPADE's output to table for classifier
         # self.convert_spade_output_to_table()
 
-        # discritization
-        #label_sequences = self.discrit_data()
+        # --------- sequence mining -----------
+        sorted_freq_seqs = self.sequence_mining(label_sequences)
 
-        # sequence mining
-        #self.sequence_mining(label_sequences)
+        # --------- build a train table -----------
+        self.build_freq_table_for_users(sorted_freq_seqs)
 
-        # classify
-        # self.classify_data()
+        # --------- classify -----------
+        self.classify_data()
 
 
 if __name__ == "__main__":

@@ -27,7 +27,7 @@ class DataPreperation(object):
                 continue
 
             if session_id in user_to_csv_map:
-                user_to_csv_map[session_id].append(price)
+                user_to_csv_map[(session_id)].append(price)
             else:
                 user_to_csv_map[session_id] = [price]
 
