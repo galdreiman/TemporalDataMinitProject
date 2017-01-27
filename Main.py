@@ -38,7 +38,7 @@ class TDM(object):
                     f.write(','.join(prices) + '\n')
 
     def discrit_data_ewd(self):
-        csvEFD(self.user_to_prices_map, 5, 10, self.input_filename.replace('.dat', '_EFD.txt'))
+        # csvEFD(self.user_to_prices_map, 5, 10, self.input_filename.replace('.dat', '_EFD.txt'))
         csvEWD(self.user_to_prices_map, 5, 10, self.input_filename.replace('.dat', '_EWD.txt'))
 
 
@@ -165,17 +165,26 @@ class TDM(object):
         # --------- discritization -----------
         #print pricess data
         # self.store_prices_as_csv()
-        label_sequences = self.discrit_data()
-        # self.discrit_data_ewd()
+        # label_sequences = self.discrit_data()
+        self.discrit_data_ewd()
 
         #convert SPADE's output to table for classifier
-        # self.convert_spade_output_to_table()
+
+        #TODO: call to spmf from here with the previous output (from EFD/EWD)
+
+        #TODO: read the output file that spmf created using EDW/EFD output's mapping session_id to smpf's ids
+
+        #TODO: create a table:
+            # rows: session id
+            # columns: sequences (spade's output)
+            # each cell contains a binary value for if session id performed a spade's sequence
+
 
         # --------- sequence mining -----------
-        sorted_freq_seqs = self.sequence_mining(label_sequences)
+        # sorted_freq_seqs = self.sequence_mining(label_sequences)
 
         # --------- build a train table -----------
-        self.build_freq_table_for_users(sorted_freq_seqs)
+        # self.build_freq_table_for_users(sorted_freq_seqs)
 
         # --------- classify -----------
         self.classify_data()

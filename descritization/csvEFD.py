@@ -22,10 +22,12 @@ class csvEFD(BaseDiscritization):
             f.write('@NUM_OF_CLASSES' + str(self.num_of_classes) + '\n')
             for idx in range(1, len(self.bins)):
                 f.write('@ITEM=' + str(idx) + '=[' + str(self.bins[idx-1]) + ',' + str(self.bins[idx]) + ']\n')
+            idx2 = 1
             for user, prices in self.data.items():
                 if len(prices) >= min_length:
                     digitized = numpy.digitize(prices, self.bins)
-                    f.write('@NAME=' + user+ '\n')
+                    f.write('@NAME=' + user+ ',index='+ str(idx2) + '\n')
+                    idx2 += 1
                     f.write(' -1 '.join(str(v) for v in digitized) + ' -2\n')
 
 
