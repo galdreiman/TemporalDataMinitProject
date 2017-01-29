@@ -21,8 +21,7 @@ class TDM(object):
         self.input_filename = 'buys_med'
         self.input_extension = 'dat'
         self.disct_extension = 'txt'
-        self.spade_output_filename = 'buys_med_prices_after_SPADE.txt'
-        self.csv_table = 'Data/seq_table.csv'
+        self.classifier_extension = 'csv'
 
     def preprocess_input(self):
         print('------------ preprocess_input file: ' + self.get_input_filename() + ' ------------ ')
@@ -52,6 +51,9 @@ class TDM(object):
 
     def get_seq_mine_filename(self, disc_alg, min_length, num_of_classes, seq_mine_alg, minsup):
         return os.path.join(self.data_dir, '{}_min{}_numSymb{}_discAlg_{}_seqAlg_{}_minSup{}.{}'.format(self.input_filename, str(min_length), str(num_of_classes), disc_alg, seq_mine_alg, minsup, self.disct_extension))
+
+    def get_table_for_classifier_filename(self, disc_alg, min_length, num_of_classes, seq_mine_alg, minsup):
+        return os.path.join(self.data_dir, '{}_min{}_numSymb{}_discAlg_{}_seqAlg_{}_minSup{}_forClassifier.{}'.format(self.input_filename, str(min_length), str(num_of_classes), disc_alg, seq_mine_alg, minsup, self.classifier_extension))
 
     def discretize_data(self,min_length, num_of_classes,alg):
         print('------------ discretize_data ------------ ')
@@ -88,33 +90,6 @@ class TDM(object):
         print(self.jar_wrapper(command_spaces))
 
 
-    #
-    # def discrit_data(self):
-    #     print('------------  discritization ------------ ')
-    #     self.sax_desc = mySAX()
-    #     self.sax_user_to_labels_map = dict()
-    #
-    #     self.user_to_label_sequence_map = dict()
-    #     label_sequences = []
-    #
-    #     for session_id, user_prices in self.user_to_prices_map.items():
-    #         if len(user_prices) < 2:
-    #             pass
-    #         # print ('%s | %s' %(session_id, str(user_prices)))
-    #         int_user_prices = [int(x) for x in user_prices if x.isdigit()]
-    #         label_seq = self.sax_desc.perform_discritization(int_user_prices)
-    #         if(label_seq is not None):
-    #             label_sequences.append(label_seq)
-    #
-    #             if(session_id in self.user_to_label_sequence_map.keys()):
-    #                 self.user_to_label_sequence_map[session_id].append(label_seq)
-    #             else:
-    #                 self.user_to_label_sequence_map[session_id] = [label_seq]
-    #
-    #     print(label_sequences)
-    #     return label_sequences
-
-
     def sequence_mining(self,label_sequences):
         print('------------  sequence mining ------------ ')
         miner = Bide()
@@ -127,15 +102,28 @@ class TDM(object):
         clssifier.train('X_Train', 'Y_Train')
         clssifier.classify('X_Test')
 
+    def load_session_id_map(self, spmf_input_filename, import_spmf_delta):
+        session_map = dict()
+        lines = [line.rstrip('\n') for line in open(spmf_input_filename)]
+        for line in lines:
+            if "@NAME" not in line:
+                continue
+            parts = line.split(',')
+            sid = parts[0].split('=')[1]
+            idx = parts[1].split('=')[1]
+            session_map[idx] = sid  #str(int(idx)+import_spmf_delta)
+        return session_map
 
-    def convert_spade_output_to_table(self):
-        print('converting spade output from file: '+ self.spade_output_filename +' to table...')
+    def convert_spmf_output_to_table(self, spmf_input_filename, spmf_output_filename, table_for_classifier_filename, import_spmf_delta):
+        print('converting spmf output from file: ' + spmf_output_filename + ' to table...')
 
         SID_to_labels_map = dict()
         all_labels = []
         all_SIDs_lables = []
 
-        lines = [line.rstrip('\n') for line in open('Data/' + self.spade_output_filename)]
+        tmp_sid_to_original_sid_map = self.load_session_id_map(spmf_input_filename, import_spmf_delta)
+
+        lines = [line.rstrip('\n') for line in open(spmf_output_filename)]
         for line in lines:
             # print(line)
             parts = line.split(' #SID: ')
@@ -147,6 +135,7 @@ class TDM(object):
             all_labels.append(labels)
 
             for SID in SIDs:
+                SID = str(int(SID)+import_spmf_delta)
                 if SID in SID_to_labels_map.keys():
                     SID_to_labels_map[SID].append(labels)
                 else:
@@ -156,6 +145,8 @@ class TDM(object):
 
         for sid in SID_to_labels_map.keys():
             row = []
+            print(sid)
+            row.append(tmp_sid_to_original_sid_map[sid])
 
             for label in all_labels:
                 if label in SID_to_labels_map[sid]:
@@ -173,7 +164,7 @@ class TDM(object):
         for row in all_SIDs_lables: print (row)
 
         #save table
-        with open(self.csv_table, 'w') as table:
+        with open(table_for_classifier_filename, 'w', newline='', encoding='utf8') as table:
             writer = csv.writer(table)
             for row in all_SIDs_lables:
                 print(row)
@@ -190,10 +181,7 @@ class TDM(object):
                 # check using regex if seq matches the user_sequence:
 
 
-
-
-
-    def run_sequence(self,discret_alg,disct_min_length,disct_num_symb,spmf_alg,mining_min_sup,mining_max_length):
+    def run_sequence(self,discret_alg,disct_min_length,disct_num_symb,spmf_alg,mining_min_sup,mining_max_length, import_spmf_delta):
         print('running sequence')
 
         # --------- preprocess -----------
@@ -208,7 +196,9 @@ class TDM(object):
             self.run_spmf(spmf_alg,discret_file,spmf_output_filename, mining_min_sup,mining_max_length, 'true')
 
         #convert SPMF's output to table for classifier
-        # self.convert_spade_output_to_table()
+        classifier_input_filename = self.get_table_for_classifier_filename(discret_alg, disct_min_length, disct_num_symb, spmf_alg, mining_min_sup)
+        if not os.path.isfile(classifier_input_filename):
+            self.convert_spmf_output_to_table(discret_file, spmf_output_filename, classifier_input_filename, import_spmf_delta)
 
         # --------- build a train table -----------
         # self.build_freq_table_for_users(sorted_freq_seqs)
@@ -219,8 +209,8 @@ class TDM(object):
 
 if __name__ == "__main__":
     x = TDM()
-    x.run_sequence('EWD',4,8,'SPADE','30%',' ')#When no need for max - just put space
-    x.run_sequence('EFD',5,6,'PrefixSpan','30%','-1')
-    x.run_sequence('EWD',6,10,'BIDE+','30%','-1')
-    x.run_sequence('EWD',3,10,'CloSpan','30%',' ')
-    x.run_sequence('EWD',3,10,'MaxSP','30%','-1')
+    x.run_sequence('EWD',4,8,'SPADE','30%',' ',0)#When no need for max - just put space
+    x.run_sequence('EWD',6,10,'BIDE+','30%','-1',1)
+    x.run_sequence('EFD',5,6,'PrefixSpan','30%','-1',1)
+    x.run_sequence('EWD',3,10,'CloSpan','30%',' ',0)
+
