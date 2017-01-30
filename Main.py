@@ -111,7 +111,8 @@ class TDM(object):
             parts = line.split(',')
             sid = parts[0].split('=')[1]
             idx = parts[1].split('=')[1]
-            session_map[idx] = sid  #str(int(idx)+import_spmf_delta)
+            target_class = parts[2].split('=')[1]
+            session_map[idx] = (sid,target_class)  #str(int(idx)+import_spmf_delta)
         return session_map
 
     def convert_spmf_output_to_table(self, spmf_input_filename, spmf_output_filename, table_for_classifier_filename, import_spmf_delta):
@@ -119,11 +120,13 @@ class TDM(object):
 
         SID_to_labels_map = dict()
         all_labels = []
-        all_SIDs_lables = []
+        all_SIDs_lables_to_classifier = []
 
-        tmp_sid_to_original_sid_map = self.load_session_id_map(spmf_input_filename, import_spmf_delta)
+        tmp_sid_to_original_sid_and_class_map = self.load_session_id_map(spmf_input_filename, import_spmf_delta)
 
         lines = [line.rstrip('\n') for line in open(spmf_output_filename)]
+
+        all_labels.append('ID')
         for line in lines:
             # print(line)
             parts = line.split(' #SID: ')
@@ -140,13 +143,13 @@ class TDM(object):
                     SID_to_labels_map[SID].append(labels)
                 else:
                     SID_to_labels_map[SID] = [labels]
-
-        all_SIDs_lables.append(all_labels)
+        all_labels.append('Class')
+        all_SIDs_lables_to_classifier.append(all_labels)
 
         for sid in SID_to_labels_map.keys():
             row = []
             print(sid)
-            row.append(tmp_sid_to_original_sid_map[sid])
+            row.append(tmp_sid_to_original_sid_and_class_map[sid][0])
 
             for label in all_labels:
                 if label in SID_to_labels_map[sid]:
@@ -159,14 +162,15 @@ class TDM(object):
             if(int(sid) in keys):
                 print("sid [%d]   price [%s]" %(sid, self.target_price_for_user[str(sid)]))
                 row.append(self.target_price_for_user[sid])
-            all_SIDs_lables.append(row)
+            all_SIDs_lables_to_classifier.append(row)
+            row.append(tmp_sid_to_original_sid_and_class_map[sid][1])
 
-        for row in all_SIDs_lables: print (row)
+        for row in all_SIDs_lables_to_classifier: print (row)
 
         #save table
         with open(table_for_classifier_filename, 'w', newline='', encoding='utf8') as table:
             writer = csv.writer(table)
-            for row in all_SIDs_lables:
+            for row in all_SIDs_lables_to_classifier:
                 print(row)
                 writer.writerow(row)
 
