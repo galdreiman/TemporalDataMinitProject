@@ -10,6 +10,7 @@ from seq_minig.Bibe import Bide
 from classification.SVMClassifier import SVMClassifier
 import csv
 from subprocess import *
+import datetime
 
 
 class TDM(object):
@@ -19,6 +20,7 @@ class TDM(object):
         self.sax_user_to_label_to_indices_list = dict()
         self.data_dir = 'Data'
         self.input_filename = 'buys_med'
+        self.summary_filename = 'experiment_summary'
         self.input_extension = 'dat'
         self.disct_extension = 'txt'
         self.classifier_extension = 'csv'
@@ -34,7 +36,7 @@ class TDM(object):
         self.target_price_for_user = dict()
         for user,prices in self.user_to_prices_map.items():
             self.target_price_for_user[user] = prices[-1]
-            print('user: %s, prices: %s'% ( user, prices))
+            # print('user: %s, prices: %s'% ( user, prices))
 
 
     # def store_prices_as_csv(self):
@@ -46,14 +48,22 @@ class TDM(object):
     def get_input_filename(self):
         return os.path.join(self.data_dir, '{}.{}'.format(self.input_filename,self.input_extension))
 
+    def get_summary_filename(self):
+        return os.path.join(self.data_dir, '{}.{}'.format(self.summary_filename,self.classifier_extension))
+
     def get_discretized_filename(self,min_length, num_of_classes,alg):
-        return os.path.join(self.data_dir, '{}_min{}_numSymb{}_disc_{}.{}'.format(self.input_filename,str(min_length), str(num_of_classes), alg, self.disct_extension))
+        return os.path.join(self.data_dir, '{}_min{}_numSymb{}_discAlg_{}.{}'.format(self.input_filename,str(min_length), str(num_of_classes), alg, self.disct_extension))
 
     def get_seq_mine_filename(self, disc_alg, min_length, num_of_classes, seq_mine_alg, minsup):
-        return os.path.join(self.data_dir, '{}_min{}_numSymb{}_discAlg_{}_seqAlg_{}_minSup{}.{}'.format(self.input_filename, str(min_length), str(num_of_classes), disc_alg, seq_mine_alg, minsup, self.disct_extension))
+        return os.path.join(self.data_dir, '{}_min{}_numSymb{}_discAlg_{}_seqAlg_{}_minSup{}.{}'.format(self.input_filename, str(min_length), str(num_of_classes), disc_alg, seq_mine_alg.replace('+',''), minsup, self.disct_extension))
 
     def get_table_for_classifier_filename(self, disc_alg, min_length, num_of_classes, seq_mine_alg, minsup):
         return os.path.join(self.data_dir, '{}_min{}_numSymb{}_discAlg_{}_seqAlg_{}_minSup{}_forClassifier.{}'.format(self.input_filename, str(min_length), str(num_of_classes), disc_alg, seq_mine_alg, minsup, self.classifier_extension))
+
+    # def get_classifier_output_filename(self, disc_alg, min_length, num_of_classes, seq_mine_alg, minsup, classifier_name, folds):
+    #     return os.path.join(self.data_dir, '{}_min{}_numSymb{}_discAlg_{}_seqAlg_{}_minSup{}_classifier_{}_folds_{}.{}'.format(
+    #         self.input_filename, str(min_length), str(num_of_classes), disc_alg, seq_mine_alg, minsup, classifier_name,
+    #         folds, self.classifier_extension))
 
     def discretize_data(self,min_length, num_of_classes,alg):
         print('------------ discretize_data ------------ ')
@@ -96,11 +106,13 @@ class TDM(object):
         sorted_freq_seqs = miner.mine_sequence(label_sequences)
         return sorted_freq_seqs
 
-    def classify_data(self):
+    def classify_data(self, input_filename, summary_filename, disct_num_symb, folds):
         print('------------  classifying ------------')
-        clssifier = SVMClassifier()
-        clssifier.train('X_Train', 'Y_Train')
-        clssifier.classify('X_Test')
+        clssifier = SVMClassifier(input_filename,disct_num_symb)
+        # clssifier.train()
+        # clssifier.classify()
+        return clssifier.classify_with_CV(folds,summary_filename)
+
 
     def load_session_id_map(self, spmf_input_filename, import_spmf_delta):
         session_map = dict()
@@ -116,7 +128,7 @@ class TDM(object):
         return session_map
 
     def convert_spmf_output_to_table(self, spmf_input_filename, spmf_output_filename, table_for_classifier_filename, import_spmf_delta):
-        print('converting spmf output from file: ' + spmf_output_filename + ' to table...')
+        print('converting spmf output from file: ' + spmf_output_filename + ' to CSV...')
 
         SID_to_labels_map = dict()
         all_labels = []
@@ -146,46 +158,47 @@ class TDM(object):
         all_labels.append('Class')
         all_SIDs_lables_to_classifier.append(all_labels)
 
+
         for sid in SID_to_labels_map.keys():
             row = []
-            print(sid)
+            # print(sid)
             row.append(tmp_sid_to_original_sid_and_class_map[sid][0])
 
-            for label in all_labels:
+            for label in all_labels[1:-1]:
                 if label in SID_to_labels_map[sid]:
                     row.append(1)
                 else:
                     row.append(0)
             # appending target value: the last price in the purchase sequence:
-            print (sid)
+            # print (sid)
             keys = [x for x in self.target_price_for_user.keys()]
             if(int(sid) in keys):
-                print("sid [%d]   price [%s]" %(sid, self.target_price_for_user[str(sid)]))
+                # print("sid [%d]   price [%s]" %(sid, self.target_price_for_user[str(sid)]))
                 row.append(self.target_price_for_user[sid])
             all_SIDs_lables_to_classifier.append(row)
             row.append(tmp_sid_to_original_sid_and_class_map[sid][1])
 
-        for row in all_SIDs_lables_to_classifier: print (row)
+        # for row in all_SIDs_lables_to_classifier: print (row)
 
         #save table
         with open(table_for_classifier_filename, 'w', newline='', encoding='utf8') as table:
             writer = csv.writer(table)
             for row in all_SIDs_lables_to_classifier:
-                print(row)
+                # print(row)
                 writer.writerow(row)
 
     def build_freq_table_for_users(self, sorted_freq_seqs):
         print('build_freq_table_for_users')
-        print(sorted_freq_seqs)
+        # print(sorted_freq_seqs)
         for session_id, user_seq in self.user_to_label_sequence_map.items():
             # print('user: %s  sequence: %s' % (session_id,user_seq))
             for tpl in sorted_freq_seqs:
                 seq = '.*'.join(tpl[0])
-                print (seq)
+                # print (seq)
                 # check using regex if seq matches the user_sequence:
 
 
-    def run_sequence(self,discret_alg,disct_min_length,disct_num_symb,spmf_alg,mining_min_sup,mining_max_length, import_spmf_delta):
+    def run_sequence(self,discret_alg,disct_min_length,disct_num_symb,spmf_alg,mining_min_sup,mining_max_length, import_spmf_delta, classifier_name, folds):
         print('running sequence')
 
         # --------- preprocess -----------
@@ -204,17 +217,51 @@ class TDM(object):
         if not os.path.isfile(classifier_input_filename):
             self.convert_spmf_output_to_table(discret_file, spmf_output_filename, classifier_input_filename, import_spmf_delta)
 
-        # --------- build a train table -----------
-        # self.build_freq_table_for_users(sorted_freq_seqs)
-
         # --------- classify -----------
-        self.classify_data()
+        summary_filename = self.get_summary_filename()
+        if not os.path.isfile(summary_filename):
+            with open(summary_filename, "a") as myfile:
+                myfile.write("TS, discret_alg, disct_min_length,disct_num_symb, spmf_alg, mining_min_sup, classifier_name, folds, Accuracy,STD,kappa_score,precision,recall"+ '\n')
+
+        # classifier_output_filename = self.get_classifier_output_filename(discret_alg, disct_min_length,
+        #                                                                    disct_num_symb, spmf_alg, mining_min_sup, classifier_name, folds)
+
+
+        params = [discret_alg, disct_min_length,disct_num_symb, spmf_alg, mining_min_sup, classifier_name, folds]
+        results = self.classify_data(classifier_input_filename, summary_filename, disct_num_symb, folds)
+
+        output_params = []
+        output_params += [datetime.datetime.utcnow()]
+        output_params += params
+        output_params += results
+        with open(summary_filename, "a") as myfile:
+            line = ",".join(list(map(str,output_params)))
+            myfile.write(line + '\n')
+
 
 
 if __name__ == "__main__":
     x = TDM()
-    x.run_sequence('EWD',4,8,'SPADE','30%',' ',0)#When no need for max - just put space
-    x.run_sequence('EWD',6,10,'BIDE+','30%','-1',1)
-    x.run_sequence('EFD',5,6,'PrefixSpan','30%','-1',1)
-    x.run_sequence('EWD',3,10,'CloSpan','30%',' ',0)
+    # x.run_sequence('EWD',4,4,'SPADE','30%',' ',0)#When no need for max - just put space
+    # x.run_sequence('EWD',6,10,'BIDE+','30%','-1',1)
+    # x.run_sequence('EFD',5,6,'PrefixSpan','30%','-1',1)
+    # x.run_sequence('EWD',3,10,'CloSpan','30%',' ',0)
+
+    dicrete_algs = ['EWD','EFD']
+    minimum_length = [2, 3, 4]
+    number_of_symbols = [3,4,5]
+    seq_mining_algs = [['SPADE',' ',0],['BIDE+','-1',1],['PrefixSpan','-1',1],['CloSpan',' ',0]] #[Alg, max pattern length, deltafix]
+    classifiers = ['SVM']
+    folds = [5, 10]
+
+    for discrete_alg in dicrete_algs:
+        for minLength in minimum_length:
+            for nSymbol in number_of_symbols:
+                for seq_minig_alg in seq_mining_algs:
+                    for classifier_alg in classifiers:
+                        for fold in folds:
+                            print('Running Discretization:{}  MinimumLength:{} Symbols:{} SeqMining:{}'.format(discrete_alg, minLength, nSymbol, seq_minig_alg))
+                            x.run_sequence(discrete_alg, minLength, nSymbol, seq_minig_alg[0], '30%', seq_minig_alg[1],
+                                           seq_minig_alg[2], classifier_alg, fold)
+
 
