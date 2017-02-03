@@ -20,7 +20,7 @@ class TDM(object):
         print('init')
         self.sax_user_to_label_to_indices_list = dict()
         self.data_dir = 'Data'
-        self.input_filename = 'buys_med'
+        self.input_filename = 'buys_med2'
         self.summary_filename = 'experiment_summary'
         self.input_extension = 'dat'
         self.disct_extension = 'txt'
