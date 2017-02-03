@@ -255,30 +255,31 @@ if __name__ == "__main__":
     # x.run_sequence('EWD',3,10,'CloSpan','30%',' ',0)
 
     dicrete_algs = ['EFD','EWD','EFDG','EWDG']
-    minimum_length = [3, 4, 5]
-    number_of_symbols = [3,4,5,6,7]
+    minimum_length = [2, 3, 4, 5]
+    number_of_symbols = [3,4,5,7,10,15]
+    minimum_supports = ["30%","40%","50%"]
     #Bide and prefix span produce the same output
     # seq_mining_algs = [['SPADE',' ',0],['BIDE+','-1',1],['PrefixSpan','-1',1],['CloSpan',' ',0]] #[Alg, max pattern length, deltafix]
     seq_mining_algs = [['SPADE',' ',0],['BIDE+','-1',1],['CloSpan',' ',0]] #[Alg, max pattern length, deltafix]
-    # classifiers = ['RF','SVM']
-    classifiers = ['RF']
+    classifiers = ['RF','SVM']
     folds = [5, 10]
 
     for discrete_alg in dicrete_algs:
         for minLength in minimum_length:
             for nSymbol in number_of_symbols:
-                for seq_minig_alg in seq_mining_algs:
-                    for classifier_alg in classifiers:
-                        for fold in folds:
-                            try:
-                                print('Running Discretization:{}  MinimumLength:{} Symbols:{} SeqMining:{}'.format(
-                                    discrete_alg, minLength, nSymbol, seq_minig_alg))
-                                x.run_sequence(discrete_alg, minLength, nSymbol, seq_minig_alg[0], '30%',
-                                               seq_minig_alg[1],
-                                               seq_minig_alg[2], classifier_alg, fold)
-                            except Exception:
-                                print('ERROR!!ERROR!!ERROR!!ERROR!!ERROR!!ERROR!!ERROR!! CYCLE SKIPPED')
-                                pass
+                for minSup in minimum_supports:
+                    for seq_minig_alg in seq_mining_algs:
+                        for classifier_alg in classifiers:
+                            for fold in folds:
+                                try:
+                                    print('Running Discretization:{}  MinimumLength:{} Symbols:{} SeqMining:{}'.format(
+                                        discrete_alg, minLength, nSymbol, seq_minig_alg))
+                                    x.run_sequence(discrete_alg, minLength, nSymbol, seq_minig_alg[0], minSup,
+                                                   seq_minig_alg[1],
+                                                   seq_minig_alg[2], classifier_alg, fold)
+                                except Exception:
+                                    print('ERROR!!ERROR!!ERROR!!ERROR!!ERROR!!ERROR!!ERROR!! CYCLE SKIPPED')
+                                    pass
 
 
 
