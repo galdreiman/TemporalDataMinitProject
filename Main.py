@@ -8,6 +8,7 @@ from descritization.myEFD import myEFD
 from descritization.myEWD import myEWD
 from seq_minig.Bibe import Bide
 from classification.SVMClassifier import SVMClassifier
+from classification.RFClassifier import RFClassifier
 import csv
 from subprocess import *
 import datetime
@@ -108,9 +109,13 @@ class TDM(object):
         sorted_freq_seqs = miner.mine_sequence(label_sequences)
         return sorted_freq_seqs
 
-    def classify_data(self, input_filename, summary_filename, disct_num_symb, folds):
+    def classify_data(self, input_filename, summary_filename, disct_num_symb, alg, folds):
         print('------------  classifying ------------')
-        clssifier = SVMClassifier(input_filename,disct_num_symb)
+        clssifier = {
+            'SVM': lambda x: SVMClassifier(input_filename,disct_num_symb),
+            'RF': lambda x: RFClassifier(input_filename,disct_num_symb),
+        }[alg](x)
+
         # clssifier.train()
         # clssifier.classify()
         return clssifier.classify_with_CV(folds,summary_filename)
@@ -230,7 +235,7 @@ class TDM(object):
 
 
         params = [discret_alg, disct_min_length,disct_num_symb, spmf_alg, mining_min_sup, classifier_name, folds]
-        results = self.classify_data(classifier_input_filename, summary_filename, disct_num_symb, folds)
+        results = self.classify_data(classifier_input_filename, summary_filename, disct_num_symb, classifier_name, folds)
 
         output_params = []
         output_params += [datetime.datetime.utcnow()]
@@ -255,7 +260,8 @@ if __name__ == "__main__":
     #Bide and prefix span produce the same output
     # seq_mining_algs = [['SPADE',' ',0],['BIDE+','-1',1],['PrefixSpan','-1',1],['CloSpan',' ',0]] #[Alg, max pattern length, deltafix]
     seq_mining_algs = [['SPADE',' ',0],['BIDE+','-1',1],['CloSpan',' ',0]] #[Alg, max pattern length, deltafix]
-    classifiers = ['SVM']
+    # classifiers = ['RF','SVM']
+    classifiers = ['RF']
     folds = [5, 10]
 
     for discrete_alg in dicrete_algs:
@@ -271,6 +277,7 @@ if __name__ == "__main__":
                                                seq_minig_alg[1],
                                                seq_minig_alg[2], classifier_alg, fold)
                             except Exception:
+                                print('ERROR!!ERROR!!ERROR!!ERROR!!ERROR!!ERROR!!ERROR!! CYCLE SKIPPED')
                                 pass
 
 
