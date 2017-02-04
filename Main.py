@@ -20,7 +20,7 @@ class TDM(object):
         print('init')
         self.sax_user_to_label_to_indices_list = dict()
         self.data_dir = 'Data'
-        self.input_filename = 'buys_med2'
+        self.input_filename = 'buys_full'
         self.summary_filename = 'experiment_summary'
         self.input_extension = 'dat'
         self.disct_extension = 'txt'
@@ -165,7 +165,7 @@ class TDM(object):
         all_labels.append('Class')
         all_SIDs_lables_to_classifier.append(all_labels)
 
-
+        keys = [x for x in self.target_price_for_user.keys()]
         for sid in SID_to_labels_map.keys():
             row = []
             # print(sid)
@@ -178,7 +178,7 @@ class TDM(object):
                     row.append(0)
             # appending target value: the last price in the purchase sequence:
             # print (sid)
-            keys = [x for x in self.target_price_for_user.keys()]
+
             if(int(sid) in keys):
                 # print("sid [%d]   price [%s]" %(sid, self.target_price_for_user[str(sid)]))
                 row.append(self.target_price_for_user[sid])
