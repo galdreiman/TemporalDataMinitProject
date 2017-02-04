@@ -13,6 +13,10 @@ import csv
 from subprocess import *
 import datetime
 
+import numpy as np
+import matplotlib.mlab as mlab
+import matplotlib.pyplot as plt
+from scipy import stats
 
 class TDM(object):
 
@@ -29,15 +33,26 @@ class TDM(object):
     def preprocess_input(self):
         print('------------ preprocess_input file: ' + self.get_input_filename() + ' ------------ ')
         PRICE_INDEX = 3
+        self.user_to_prices_map = dict()
         data_preparer = DataPreperation(self.get_input_filename())
         self.input_train_data = data_preparer.read_csv_data()
         self.prices = [int(line[PRICE_INDEX]) for line in self.input_train_data if line[PRICE_INDEX].isdigit()]
 
-        self.user_to_prices_map = data_preparer.read_user_to_purchases_data()
+        self.tmp_user_to_prices_map = data_preparer.read_user_to_purchases_data()
         self.target_price_for_user = dict()
-        for user,prices in self.user_to_prices_map.items():
+        for user,prices in self.tmp_user_to_prices_map.items():
             self.target_price_for_user[user] = prices[-1]
             # print('user: %s, prices: %s'% ( user, prices))
+
+        # filter outliers
+        X = np.array(self.prices)
+        filtered = set(X[~self.is_outlier(X)])
+        for user,prices in self.tmp_user_to_prices_map.items():
+            if set(prices) < filtered:
+                pass
+            self.user_to_prices_map[user] = prices
+
+
 
 
     # def store_prices_as_csv(self):
@@ -66,6 +81,39 @@ class TDM(object):
     #         self.input_filename, str(min_length), str(num_of_classes), disc_alg, seq_mine_alg, minsup, classifier_name,
     #         folds, self.classifier_extension))
 
+    def is_outlier(self,points, thresh=3.5):
+        """
+        Returns a boolean array with True if points are outliers and False
+        otherwise.
+
+        Parameters:
+        -----------
+            points : An numobservations by numdimensions array of observations
+            thresh : The modified z-score to use as a threshold. Observations with
+                a modified z-score (based on the median absolute deviation) greater
+                than this value will be classified as outliers.
+
+        Returns:
+        --------
+            mask : A numobservations-length boolean array.
+
+        References:
+        ----------
+            Boris Iglewicz and David Hoaglin (1993), "Volume 16: How to Detect and
+            Handle Outliers", The ASQC Basic References in Quality Control:
+            Statistical Techniques, Edward F. Mykytka, Ph.D., Editor.
+        """
+        if len(points.shape) == 1:
+            points = points[:,None]
+        median = np.median(points, axis=0)
+        diff = np.sum((points - median)**2, axis=-1)
+        diff = np.sqrt(diff)
+        med_abs_deviation = np.median(diff)
+
+        modified_z_score = 0.6745 * diff / med_abs_deviation
+
+        return modified_z_score > thresh
+
     def discretize_data(self,min_length, num_of_classes,alg):
         print('------------ discretize_data ------------ ')
         outfile = self.get_discretized_filename(min_length, num_of_classes,alg)
@@ -75,6 +123,7 @@ class TDM(object):
                 'EFD': lambda x: csvEFD(self.user_to_prices_map, min_length, num_of_classes, outfile, False),
                 'EWDG': lambda x: csvEWD(self.user_to_prices_map, min_length, num_of_classes, outfile, True),
                 'EFDG': lambda x: csvEFD(self.user_to_prices_map, min_length, num_of_classes, outfile, True),
+                'SAX': lambda x: mySAX(self.user_to_prices_map, min_length, num_of_classes, outfile, False),
             }[alg](x)
         else:
             print('------------ discretize_data file: ' + outfile + ' Exists - Skipping ------------ ')
@@ -100,7 +149,40 @@ class TDM(object):
         params = [alg, infile, outfile, *args]
         command = ['Data\DM.jar ', 'run'] + list(params)
         command_spaces = list(map(lambda t: ' {} '.format(t), command))
-        print(self.jar_wrapper(command_spaces))
+        print('SPMF output: %s' % self.jar_wrapper(command_spaces))
+
+    def generate_histogram(self, x):
+        print("Histogram")
+        X = np.array(x)
+        filtered = X[~self.is_outlier(X)]
+
+        # Plot the results
+        fig, (ax1, ax2) = plt.subplots(nrows=2)
+
+        ax1.hist(x)
+        ax1.set_title('Original')
+
+        ax2.hist(filtered)
+        ax2.set_title('Without Outliers')
+
+        plt.show()
+
+        # mean, std = X.mean(), X.std()
+
+        # the histogram of the data
+        # n, bins, patches = plt.hist(x, 100, normed=1, facecolor='green', alpha=0.75)
+        #
+        # # add a 'best fit' line
+        # y = mlab.normpdf( bins, mean, std)
+        # l = plt.plot(bins, y, 'r--', linewidth=1)
+        #
+        # plt.xlabel('Smarts')
+        # plt.ylabel('Probability')
+        # plt.title('mean=%s, std=%s' %(mean, std))
+        # # plt.axis([40, 160, 0, 0.03])
+        # plt.grid(True)
+        #
+        # plt.show()
 
 
     def sequence_mining(self,label_sequences):
@@ -211,6 +293,9 @@ class TDM(object):
         # --------- preprocess -----------
         self.preprocess_input()
 
+        # --------- preprocess -----------
+        #self.generate_histogram(self.prices)
+
         # --------- discritization to file -----------
         discret_file = self.discretize_data(disct_min_length, disct_num_symb, discret_alg)
 
@@ -228,7 +313,7 @@ class TDM(object):
         summary_filename = self.get_summary_filename()
         if not os.path.isfile(summary_filename):
             with open(summary_filename, "a") as myfile:
-                myfile.write("TS, discret_alg, disct_min_length,disct_num_symb, spmf_alg, mining_min_sup, classifier_name, folds, Accuracy,STD,kappa_score,precision,recall"+ '\n')
+                myfile.write("TS, discret_alg, disct_min_length,disct_num_symb, spmf_alg, mining_min_sup, classifier_name, folds, Accuracy,STD,kappa_score,precision,recall,F1_Score"+ '\n')
 
         # classifier_output_filename = self.get_classifier_output_filename(discret_alg, disct_min_length,
         #                                                                    disct_num_symb, spmf_alg, mining_min_sup, classifier_name, folds)
