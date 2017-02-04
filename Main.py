@@ -313,7 +313,7 @@ class TDM(object):
         summary_filename = self.get_summary_filename()
         if not os.path.isfile(summary_filename):
             with open(summary_filename, "a") as myfile:
-                myfile.write("TS, discret_alg, disct_min_length,disct_num_symb, spmf_alg, mining_min_sup, classifier_name, folds, Accuracy,STD,kappa_score,precision,recall"+ '\n')
+                myfile.write("TS, discret_alg, disct_min_length,disct_num_symb, spmf_alg, mining_min_sup, classifier_name, folds, Accuracy,STD,kappa_score,precision,recall,F1_Score"+ '\n')
 
         # classifier_output_filename = self.get_classifier_output_filename(discret_alg, disct_min_length,
         #                                                                    disct_num_symb, spmf_alg, mining_min_sup, classifier_name, folds)

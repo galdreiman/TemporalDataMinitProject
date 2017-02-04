@@ -53,8 +53,10 @@ class BaseClassifier(object):
         recall = recall_score(y_test, y_pred, average='macro')
         print("recall: %f" % recall)
 
-        # Accuracy  |  std  |  kappa_score  |  precision  |  recall
-        return [scores.mean(), scores.std() * 2,kappa_score, precision,  recall]
+        F1 = 2 * (precision * recall) / (precision + recall)
+
+        # Accuracy  |  std  |  kappa_score  |  precision  |  recall  |  F1_Score
+        return [scores.mean(), scores.std() * 2,kappa_score, precision,  recall, F1]
 
 
 
