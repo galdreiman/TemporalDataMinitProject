@@ -2,6 +2,7 @@ import os
 
 from descritization.csvEFD import csvEFD
 from descritization.csvEWD import csvEWD
+from descritization.csvSAX import csvSAX
 from preprocess.DataPreperation import DataPreperation
 from descritization.mySAX import mySAX
 from descritization.myEFD import myEFD
@@ -24,7 +25,7 @@ class TDM(object):
         print('init')
         self.sax_user_to_label_to_indices_list = dict()
         self.data_dir = 'Data'
-        self.input_filename = 'buys_full'
+        self.input_filename = 'buys_med2'
         self.summary_filename = 'experiment_summary'
         self.input_extension = 'dat'
         self.disct_extension = 'txt'
@@ -123,7 +124,8 @@ class TDM(object):
                 'EFD': lambda x: csvEFD(self.user_to_prices_map, min_length, num_of_classes, outfile, False),
                 'EWDG': lambda x: csvEWD(self.user_to_prices_map, min_length, num_of_classes, outfile, True),
                 'EFDG': lambda x: csvEFD(self.user_to_prices_map, min_length, num_of_classes, outfile, True),
-                'SAX': lambda x: mySAX(self.user_to_prices_map, min_length, num_of_classes, outfile, False),
+                'SAX': lambda x: csvSAX(self.user_to_prices_map, min_length, num_of_classes, outfile, False),
+                'SAXG': lambda x: csvSAX(self.user_to_prices_map, min_length, num_of_classes, outfile, True),
             }[alg](x)
         else:
             print('------------ discretize_data file: ' + outfile + ' Exists - Skipping ------------ ')
@@ -339,7 +341,7 @@ if __name__ == "__main__":
     # x.run_sequence('EFD',5,6,'PrefixSpan','30%','-1',1)
     # x.run_sequence('EWD',3,10,'CloSpan','30%',' ',0)
 
-    dicrete_algs = ['EFD','EWD','EFDG','EWDG']
+    dicrete_algs = ['SAX','SAXG','EFD','EWD','EFDG','EWDG']
     minimum_length = [2, 3, 4, 5]
     number_of_symbols = [3,4,5,7,10,15]
     minimum_supports = ["30%","40%","50%"]
